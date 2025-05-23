@@ -64,24 +64,22 @@ jobs:
           container-name: discodeit-app
           image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY}}:${{ env.IMAGE_TAG }}
 
-      - name: Stop existing service temporarily
+      - name: Stop running tasks
         run: |
           aws ecs update-service \
             --cluster ${{ vars.ECS_CLUSTER }} \
             --service ${{ vars.ECS_SERVICE }} \
             --desired-count 0
-
-          echo "Waiting for old tasks to stop..."
+          echo "Waiting for tasks to stop..."
           sleep 30
 
-      - name: Deploy to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          cluster: ${{ vars.ECS_CLUSTER }}
-          service: ${{ vars.ECS_SERVICE }}
-          force-new-deployment: true
-          wait-for-service-stability: true
+      - name: Restart service with new task definition
+        run: |
+          aws ecs update-service \
+            --cluster ${{ vars.ECS_CLUSTER }} \
+            --service ${{ vars.ECS_SERVICE }} \
+            --task-definition ${{ steps.render-task-def.outputs.task-definition }} \
+            --desired-count 1
 
       - name: Verify deployment
         run: |
